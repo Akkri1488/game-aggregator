@@ -1,0 +1,9 @@
+## инструкция для grafana где искать файлы для dashboards
+apiVersion: 1
+
+providers:
+  - name: 'default'
+    folder: 'Game Parsers'
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

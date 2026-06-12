@@ -1,0 +1,25 @@
+# Зависимости (корневые и вложенные)
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Сборки фронтенда
+frontend/dist/
+frontend/build/
+
+# Файлы с паролями и переменными окружения
+.env
+backend/.env
+frontend/.env
+
+# Настройки редактора кода
+.idea/
+
+# Данные мониторинга и БД (чтобы Docker-тома не залились на Github, если они есть)
+grafana_data/
+prometheus_data/
+pgdata/
+
+# Системные файлы Mac/Windows
+.DS_Store
+Thumbs.db

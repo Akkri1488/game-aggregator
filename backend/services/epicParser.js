@@ -46,6 +46,16 @@ async function fetchCatalogPage(start) {
                         namespace
                         productSlug
                         urlSlug
+                        catalogNs {
+                            mappings(pageType: "productHome") {
+                                pageSlug
+                                pageType
+                            }
+                        }
+                        offerMappings {
+                            pageSlug
+                            pageType
+                        }
                         seller { name }
                         price(country: $country) {
                             totalPrice {
@@ -83,16 +93,22 @@ async function fetchCatalogPage(start) {
     return res.data?.data?.Catalog?.searchStore;
 }
 
-// Собирает рабочую ссылку на страницу игры в Epic.
-// namespace — это внутренний ID, а не адрес страницы, поэтому используем slug.
-// productSlug/urlSlug — часть стандартного ответа searchStore.
-// Если slug нет или он пустой — ведём на поиск по названию (рабочая ссылка вместо not-found).
+// Собирает ссылку на страницу игры в Epic.
+// pageSlug — это правильный человекочитаемый адрес страницы (например "the-ouroboros-king-e1d547"),
+// он приходит в offerMappings или catalogNs.mappings(pageType: "productHome").
+// В отличие от productSlug, pageSlug содержит полный адрес с суффиксом — ссылка рабочая.
+// Если pageSlug нет — ведём на поиск по названию (надёжный запасной вариант).
 function buildEpicUrl(item) {
-    let slug = item.productSlug || item.urlSlug || null;
+    const pageSlug =
+        item.offerMappings?.[0]?.pageSlug ||
+        item.catalogNs?.mappings?.[0]?.pageSlug ||
+        null;
 
-    if (slug && slug !== 'null' && slug !== '[]') {
-        slug = slug.replace(/\/home$/, '');
-        return `https://store.epicgames.com/ru/p/${slug}`;
+    if (pageSlug && pageSlug !== 'null') {
+        const clean = pageSlug.replace(/^\/+/, '').replace(/\/home$/, '').trim();
+        if (clean) {
+            return `https://store.epicgames.com/ru/p/${clean}`;
+        }
     }
     return `https://store.epicgames.com/ru/browse?q=${encodeURIComponent(item.title)}`;
 }

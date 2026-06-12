@@ -1,14 +1,14 @@
-const { Game } = require('../../../../Downloads/game-aggregator-main-2/backend/models');
-const sequelize = require('../../../../Downloads/game-aggregator-main-2/backend/db');
+const { Game } = require('../models');
+const sequelize = require('../db');
 
 // Функция нормализации строки (очистка от мусора)
 function normalizeString(str) {
     if (!str) return '';
     return str
-        .replace(/™|®|©/g, '')       // Удаляем торговые марки
-        .replace(/[:\-]/g, ' ')      // Двоеточия и тире -> пробел (частая причина несовпадений)
-        .replace(/[^\w\sа-яё]/gi, '') // Удаляем остальную пунктуацию (апострофы, запятые)
-        .replace(/\s+/g, ' ')        // Множественные пробелы -> один
+        .replace(/™|®|©/g, '')
+        .replace(/[:\-]/g, ' ')
+        .replace(/[^\w\sа-яё]/gi, '')
+        .replace(/\s+/g, ' ')
         .trim();
 }
 
@@ -30,7 +30,6 @@ async function findOrCreateGame(title, developer, genre) {
             defaults: { title: cleanTitle, developer, genre }
         });
 
-        // Если игра уже была — дополняем недостающие поля
         if (!created) {
             const updates = {};
             if (!game.developer && developer) updates.developer = developer;

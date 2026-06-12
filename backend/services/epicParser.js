@@ -8,7 +8,7 @@ const {
     batchDurationHistogram,
     queueSizeGauge,
     parserRunningGauge,
-} = require('../../../../Downloads/game-aggregator-main-2/backend/metrics');
+} = require('../metrics');
 
 const PLATFORM    = 'Epic';
 const EPIC_PROMO  = 'https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions';

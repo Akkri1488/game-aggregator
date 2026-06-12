@@ -1,8 +1,8 @@
-const { Price, PriceHistory } = require('../../../../Downloads/game-aggregator-main-2/backend/models');
+const { Price, PriceHistory } = require('../models');
 
 // Единая запись цены для всех платформ.
 // 1. upsert конфликтует по unique-индексу (game_id, platform), поэтому повторный
-//    парсинг ОБНОВЛЯЕТ строку цены, а не плодит дубли.
+//    парсинг обновляет строку цены, а не плодит дубли.
 // 2. В историю цен пишем запись только если цена реально изменилась
 //    (или истории ещё не было) — иначе таблица замусоривается на каждом прогоне.
 async function savePrice({ gameId, price, originalPrice, discount, platform, externalId, url }) {

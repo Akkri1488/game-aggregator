@@ -9,7 +9,7 @@ const {
     batchDurationHistogram,
     queueSizeGauge,
     parserRunningGauge,
-} = require('../../../../Downloads/game-aggregator-main-2/backend/metrics');
+} = require('../metrics');
 
 const PLATFORM = 'Steam';
 const sleep    = (ms) => new Promise(resolve => setTimeout(resolve, ms));

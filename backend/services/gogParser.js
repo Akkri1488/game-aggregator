@@ -8,7 +8,7 @@ const {
     batchDurationHistogram,
     queueSizeGauge,
     parserRunningGauge,
-} = require('../../../../Downloads/game-aggregator-main-2/backend/metrics');
+} = require('../metrics');
 
 const PLATFORM    = 'GOG';
 const GOG_CATALOG = 'https://catalog.gog.com/v1/catalog';

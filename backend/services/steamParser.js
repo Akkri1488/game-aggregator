@@ -98,9 +98,31 @@ async function saveGame(appId, data) {
 
         const isFree        = data.is_free ?? false;
         const priceOverview = data.price_overview;
-        const finalPrice    = isFree ? 0 : (priceOverview?.final   ?? 0) / 100;
-        const origPrice     = isFree ? 0 : (priceOverview?.initial ?? priceOverview?.final ?? 0) / 100;
-        const discount      = priceOverview?.discount_percent ?? 0;
+        const comingSoon    = data.release_date?.coming_soon === true;
+
+        // Игра ещё не вышла (предзаказ/анонс) — цены либо нет, либо это заглушка.
+        // Пропускаем, чтобы не показывать ложный «0». Бесплатные игры это не затрагивает.
+        if (!isFree && comingSoon) {
+            gamesSkippedCounter.inc({ platform: PLATFORM });
+            return null;
+        }
+
+        // Платная игра без данных о цене — пропускаем
+        if (!isFree && !priceOverview) {
+            gamesSkippedCounter.inc({ platform: PLATFORM });
+            return null;
+        }
+
+        const finalPrice = isFree ? 0 : priceOverview.final   / 100;
+        const origPrice  = isFree ? 0 : (priceOverview.initial ?? priceOverview.final) / 100;
+        const discount   = priceOverview?.discount_percent ?? 0;
+
+        // Защита: платная игра с ценой 0 — это заглушка (анонс/предзаказ без цены).
+        // Настоящая цена платной игры не может быть нулевой.
+        if (!isFree && finalPrice === 0) {
+            gamesSkippedCounter.inc({ platform: PLATFORM });
+            return null;
+        }
 
         await savePrice({
             gameId:        game.id,

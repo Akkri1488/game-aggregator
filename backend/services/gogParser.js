@@ -33,13 +33,32 @@ async function fetchGogPage(page) {
 async function fetchGogDetails(gogId) {
     try {
         const res = await axios.get(`${GOG_DETAILS}/${gogId}`, {
-            params:  { locale: 'ru-RU', expand: 'description' },
+            params:  { locale: 'ru-RU', expand: 'description,links' },
             timeout: 8000
         });
         return res.data;
     } catch {
         return null;
     }
+}
+
+// Собирает рабочую ссылку на страницу игры в GOG.
+// 1) Лучший источник — официальное поле links.product_card из детального запроса.
+// 2) Иначе — текстовый slug (из details надёжнее, чем из каталога).
+// 3) Если ничего нет — поиск по названию.
+function buildGogUrl(item, details) {
+    const productCard = details?.links?.product_card;
+    if (typeof productCard === 'string' && /^https?:\/\/(www\.)?gog\.com\/.+\/game\//.test(productCard)) {
+        return productCard;
+    }
+
+    // slug должен быть текстовым (содержать буквы); число — это id, оно не годится
+    const slug = details?.slug || item.slug;
+    if (slug && typeof slug === 'string' && /[a-z]/i.test(slug)) {
+        return `https://www.gog.com/en/game/${slug}`;
+    }
+
+    return `https://www.gog.com/en/games?query=${encodeURIComponent(item.title)}`;
 }
 
 async function saveGogGame(item, details) {
@@ -57,8 +76,7 @@ async function saveGogGame(item, details) {
         const genre     = details?.genres?.map(g => g.name?.['*'] || g.name).filter(Boolean).join(', ') || null;
         const developer = details?.company ?? item.developers?.[0] ?? 'Unknown';
         const gogId     = String(item.id);
-        const slug      = item.slug || gogId;
-        const url       = `https://www.gog.com/game/${slug}`;
+        const url       = buildGogUrl(item, details);
 
         const game = await findOrCreateGame(item.title, developer, genre);
         if (!game) {

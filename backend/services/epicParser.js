@@ -44,6 +44,8 @@ async function fetchCatalogPage(start) {
                         title
                         id
                         namespace
+                        productSlug
+                        urlSlug
                         seller { name }
                         price(country: $country) {
                             totalPrice {
@@ -81,6 +83,20 @@ async function fetchCatalogPage(start) {
     return res.data?.data?.Catalog?.searchStore;
 }
 
+// Собирает рабочую ссылку на страницу игры в Epic.
+// namespace — это внутренний ID, а не адрес страницы, поэтому используем slug.
+// productSlug/urlSlug — часть стандартного ответа searchStore.
+// Если slug нет или он пустой — ведём на поиск по названию (рабочая ссылка вместо not-found).
+function buildEpicUrl(item) {
+    let slug = item.productSlug || item.urlSlug || null;
+
+    if (slug && slug !== 'null' && slug !== '[]') {
+        slug = slug.replace(/\/home$/, '');
+        return `https://store.epicgames.com/ru/p/${slug}`;
+    }
+    return `https://store.epicgames.com/ru/browse?q=${encodeURIComponent(item.title)}`;
+}
+
 async function saveEpicGame(item) {
     try {
         const priceData = item.price?.totalPrice;
@@ -104,7 +120,7 @@ async function saveEpicGame(item) {
 
         const genre     = item.tags?.filter(t => t?.name).map(t => t.name).slice(0, 3).join(', ') || null;
         const developer = item.seller?.name ?? 'Unknown';
-        const url       = `https://store.epicgames.com/ru/p/${item.namespace}`;
+        const url       = buildEpicUrl(item);
 
         const game = await findOrCreateGame(item.title, developer, genre);
         if (!game) {

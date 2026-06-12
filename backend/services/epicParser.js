@@ -1,6 +1,6 @@
 const axios = require('axios');
-const { Price, PriceHistory } = require('../models');
 const { findOrCreateGame } = require('./gameMatcher');
+const { savePrice } = require('./priceWriter');
 const {
     gamesParsedCounter,
     apiErrorsCounter,
@@ -8,7 +8,7 @@ const {
     batchDurationHistogram,
     queueSizeGauge,
     parserRunningGauge,
-} = require('../metrics');
+} = require('../../../../Downloads/game-aggregator-main-2/backend/metrics');
 
 const PLATFORM    = 'Epic';
 const EPIC_PROMO  = 'https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions';
@@ -112,17 +112,15 @@ async function saveEpicGame(item) {
             return null;
         }
 
-        await Price.upsert({
-            game_id:          game.id,
-            price:            finalPrice,
-            original_price:   originalPrice,
-            discount_percent: discount,
-            platform:         PLATFORM,
-            external_id:      `epic_${item.id}`,
+        await savePrice({
+            gameId:        game.id,
+            price:         finalPrice,
+            originalPrice: originalPrice,
+            discount,
+            platform:      PLATFORM,
+            externalId:    `epic_${item.id}`,
             url
         });
-
-        await PriceHistory.create({ game_id: game.id, price: finalPrice });
 
         gamesParsedCounter.inc({ platform: PLATFORM });
 

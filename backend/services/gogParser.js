@@ -1,6 +1,6 @@
 const axios = require('axios');
-const { Price, PriceHistory } = require('../models');
 const { findOrCreateGame } = require('./gameMatcher');
+const { savePrice } = require('./priceWriter');
 const {
     gamesParsedCounter,
     apiErrorsCounter,
@@ -8,7 +8,7 @@ const {
     batchDurationHistogram,
     queueSizeGauge,
     parserRunningGauge,
-} = require('../metrics');
+} = require('../../../../Downloads/game-aggregator-main-2/backend/metrics');
 
 const PLATFORM    = 'GOG';
 const GOG_CATALOG = 'https://catalog.gog.com/v1/catalog';
@@ -66,17 +66,15 @@ async function saveGogGame(item, details) {
             return null;
         }
 
-        await Price.upsert({
-            game_id:          game.id,
-            price:            finalPrice,
-            original_price:   originalPrice,
-            discount_percent: discount,
-            platform:         PLATFORM,
-            external_id:      `gog_${gogId}`,
+        await savePrice({
+            gameId:        game.id,
+            price:         finalPrice,
+            originalPrice: originalPrice,
+            discount,
+            platform:      PLATFORM,
+            externalId:    `gog_${gogId}`,
             url
         });
-
-        await PriceHistory.create({ game_id: game.id, price: finalPrice });
 
         gamesParsedCounter.inc({ platform: PLATFORM });
 

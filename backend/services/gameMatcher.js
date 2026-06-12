@@ -1,45 +1,59 @@
-const { Game } = require('../models');
-const sequelize = require('../db');
+const { Game } = require('../../../../Downloads/game-aggregator-main-2/backend/models');
+const sequelize = require('../../../../Downloads/game-aggregator-main-2/backend/db');
 
 // Функция нормализации строки (очистка от мусора)
 function normalizeString(str) {
     if (!str) return '';
     return str
-        .replace(/™|®|©/g, '') // Удаляем торговые марки
-        .replace(/[:\-]/g, ' ') // Заменяем двоеточия и тире на пробелы (частая причина несовпадений)
-        .replace(/[^\w\sа-яё]/gi, '') // Удаляем всю остальную пунктуацию (апострофы, запятые)
-        .replace(/\s+/g, ' ') // Заменяем множественные пробелы на один
+        .replace(/™|®|©/g, '')       // Удаляем торговые марки
+        .replace(/[:\-]/g, ' ')      // Двоеточия и тире -> пробел (частая причина несовпадений)
+        .replace(/[^\w\sа-яё]/gi, '') // Удаляем остальную пунктуацию (апострофы, запятые)
+        .replace(/\s+/g, ' ')        // Множественные пробелы -> один
         .trim();
 }
 
+// Атомарный поиск-или-создание игры.
+// findOrCreate выполняется в одной операции и опирается на unique-индекс по title,
+// что исключает дубликаты при параллельной обработке батча (Promise.all).
 async function findOrCreateGame(title, developer, genre) {
     if (!title) return null;
 
-    // 1. Очищаем название ОДИН РАЗ
     const cleanTitle = normalizeString(title);
+    if (!cleanTitle) return null;
 
-    // 2. Ищем по очищенному названию
-    const existing = await Game.findOne({
-        where: sequelize.where(
-            sequelize.fn('LOWER', sequelize.col('title')),
-            sequelize.fn('LOWER', cleanTitle)
-        )
-    });
+    try {
+        const [game, created] = await Game.findOrCreate({
+            where: sequelize.where(
+                sequelize.fn('LOWER', sequelize.col('title')),
+                cleanTitle.toLowerCase()
+            ),
+            defaults: { title: cleanTitle, developer, genre }
+        });
 
-    if (existing) {
-        // Обновляем данные, если их не было
-        const updates = {};
-        if (!existing.developer && developer) updates.developer = developer;
-        if (!existing.genre && genre)         updates.genre     = genre;
-
-        if (Object.keys(updates).length > 0) {
-            await existing.update(updates);
+        // Если игра уже была — дополняем недостающие поля
+        if (!created) {
+            const updates = {};
+            if (!game.developer && developer) updates.developer = developer;
+            if (!game.genre && genre)         updates.genre     = genre;
+            if (Object.keys(updates).length > 0) {
+                await game.update(updates);
+            }
         }
-        return existing;
-    }
 
-    // 3. СОХРАНЯЕМ тоже очищенное название, чтобы в будущем поиск работал корректно!
-    return Game.create({ title: cleanTitle, developer, genre });
+        return game;
+    } catch (e) {
+        // На случай гонки: параллельный запрос успел создать ту же игру между
+        // нашим SELECT и INSERT -> ловим конфликт уникальности и до-читываем запись.
+        if (e.name === 'SequelizeUniqueConstraintError') {
+            return Game.findOne({
+                where: sequelize.where(
+                    sequelize.fn('LOWER', sequelize.col('title')),
+                    cleanTitle.toLowerCase()
+                )
+            });
+        }
+        throw e;
+    }
 }
 
-module.exports = { findOrCreateGame };
+module.exports = { findOrCreateGame, normalizeString };

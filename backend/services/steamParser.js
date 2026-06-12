@@ -1,8 +1,7 @@
 require('dotenv').config({ path: '../.env' });
-const sequelize = require('../db');
 const axios     = require('axios');
-const { Game, Price, PriceHistory } = require('../models');
-const { findOrCreateGame } = require('../services/gameMatcher');
+const { findOrCreateGame } = require('./gameMatcher');
+const { savePrice } = require('./priceWriter');
 const {
     gamesParsedCounter,
     apiErrorsCounter,
@@ -10,7 +9,7 @@ const {
     batchDurationHistogram,
     queueSizeGauge,
     parserRunningGauge,
-} = require('../metrics');
+} = require('../../../../Downloads/game-aggregator-main-2/backend/metrics');
 
 const PLATFORM = 'Steam';
 const sleep    = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -103,17 +102,15 @@ async function saveGame(appId, data) {
         const origPrice     = isFree ? 0 : (priceOverview?.initial ?? priceOverview?.final ?? 0) / 100;
         const discount      = priceOverview?.discount_percent ?? 0;
 
-        await Price.upsert({
-            game_id:          game.id,
-            price:            finalPrice,
-            original_price:   origPrice,
-            discount_percent: discount,
-            platform:         PLATFORM,
-            external_id:      `steam_${appId}`,
+        await savePrice({
+            gameId:        game.id,
+            price:         finalPrice,
+            originalPrice: origPrice,
+            discount,
+            platform:      PLATFORM,
+            externalId:    `steam_${appId}`,
             url
         });
-
-        await PriceHistory.create({ game_id: game.id, price: finalPrice });
 
         gamesParsedCounter.inc({ platform: PLATFORM });
 
